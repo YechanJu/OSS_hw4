@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>my ajax</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-whl5q4gEL1XtfgMyTb8SmbbytiLR/NESt4w1zwZ3QtLAA5o/fx7aPTckZl5FJbL8" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script>
+</head>
+<body>
+
+    <button onclick="getDataFromJSONFile()">Get DATA</button>
+    <button data-bs-toggle="modal" data-bs-target="#dataModal" onclick="clearModalFields()">Add DATA</button>
+    <div id="div_students"></div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="dataModal" tabindex="-1" aria-labelledby="dataModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="dataModalLabel">Student Data</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="student_id" />
+                    <div class="mb-3">
+                        <label for="student_name" class="form-label">NAME</label>
+                        <input type="text" class="form-control" id="student_name">
+                    </div>
+                    <div class="mb-3">
+                        <label for="student_age" class="form-label">AGE</label>
+                        <input type="number" class="form-control" id="student_age">
+                    </div>
+                    <div class="mb-3">
+                        <label for="student_position" class="form-label">POSITION</label>
+                        <input type="text" class="form-control" id="student_position">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="submitData()">Save changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-PP9H6SkUZBgz4fr2ScgVoxFaaC44/5fxZK3u0i3zYSzwBxl7Z4+dpIQ8exIzk56a" crossorigin="anonymous"></script>
+    <script>
+        let isEditMode = false;
+
+        function getDataFromJSONFile() {
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", "https://672818aa270bd0b975544f3a.mockapi.io/api/v1/players");
+            xhr.setRequestHeader("content-type", "application/json");
+            xhr.send();
+            xhr.onload = () => {
+                if (xhr.status === 200) {
+                    $("#div_students").html("");
+                    let students = JSON.parse(xhr.response);
+                    students.forEach((item) => {
+                        $("#div_students").append(`
+                            <div>
+                                ID: ${item.id} | Name: ${item.name} | Age: ${item.age} | Position: ${item.position}
+                                <button onclick="editData(${item.id})">Edit</button>
+                                <button onclick="deleteData(${item.id})">Delete</button>
+                            </div>
+                        `);
+                    });
+                }
+            }
+        }
+
+        function clearModalFields() {
+            $("#student_id").val("");
+            $("#student_name").val("");
+            $("#student_age").val("");
+            $("#student_position").val("");
+            isEditMode = false;
+        }
+
+        function submitData() {
+            if (isEditMode) {
+                const id = $("#student_id").val();
+                updateData(id);
+            } else {
+                createDataToJSONFile();
+            }
+        }
+
+        function createDataToJSONFile() {
+            const xhr = new XMLHttpRequest();
+            xhr.open("POST", "https://672818aa270bd0b975544f3a.mockapi.io/api/v1/players");
+            xhr.setRequestHeader("content-type", "application/json; charset=UTF-8");
+
+            let data = {
+                name: $("#student_name").val(),
+                age: $("#student_age").val(),
+                position: $("#student_position").val()
+            };
+
+            xhr.send(JSON.stringify(data));
+            xhr.onload = () => {
+                if (xhr.status === 201) {
+                    alert("등록 성공!");
+                    getDataFromJSONFile();
+                    $("#dataModal").modal('hide');
+                }
+            }
+        }
+
+        function editData(id) {
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", "https://672818aa270bd0b975544f3a.mockapi.io/api/v1/players/" + id);
+            xhr.setRequestHeader("content-type", "application/json");
+            xhr.send();
+            xhr.onload = () => {
+                if (xhr.status === 200) {
+                    const student = JSON.parse(xhr.response);
+                    $("#student_id").val(student.id);
+                    $("#student_name").val(student.name);
+                    $("#student_age").val(student.age);
+                    $("#student_position").val(student.position);
+                    isEditMode = true;
+                    $("#dataModal").modal("show");
+                }
+            }
+        }
+
+        function updateData(id) {
+            const xhr = new XMLHttpRequest();
+            xhr.open("PUT", "https://672818aa270bd0b975544f3a.mockapi.io/api/v1/players/" + id);
+            xhr.setRequestHeader("content-type", "application/json; charset=UTF-8");
+
+            let data = {
+                name: $("#student_name").val(),
+                age: $("#student_age").val(),
+                position: $("#student_position").val()
+            };
+
+            xhr.send(JSON.stringify(data));
+            xhr.onload = () => {
+                if (xhr.status === 200) {
+                    alert("수정 성공!");
+                    getDataFromJSONFile();
+                    $("#dataModal").modal("hide");
+                }
+            }
+        }
+
+        function deleteData(id) {
+            const xhr = new XMLHttpRequest();
+            xhr.open("DELETE", "https://672818aa270bd0b975544f3a.mockapi.io/api/v1/players/" + id);
+            xhr.setRequestHeader("content-type", "application/json; charset=UTF-8");
+            xhr.send();
+
+            xhr.onload = () => {
+                if (xhr.status === 200) {
+                    alert("삭제 성공!");
+                    getDataFromJSONFile();
+                }
+            };
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+</body>
+</html>
